@@ -52,11 +52,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.boardImage == nil {
 		g.boardImage = ebiten.NewImage(g.board.Size())
 	}
+	//设置背景颜色
 	screen.Fill(backgroundColor)
+	//渲染棋盘
 	g.board.Draw(g.boardImage)
 	op := &ebiten.DrawImageOptions{}
+	//游戏界面的大小
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	//棋盘的大小
 	bw, bh := g.boardImage.Bounds().Dx(), g.boardImage.Bounds().Dy()
+	//棋盘居中
 	x := (sw - bw) / 2
 	y := (sh - bh) / 2
 	op.GeoM.Translate(float64(x), float64(y))

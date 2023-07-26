@@ -22,8 +22,8 @@ const (
 	maxPoppingCount = 6
 )
 const (
-	tileSize   = 80
-	tileMargin = 4
+	tileSize   = 80 //每个格子的宽高
+	tileMargin = 4  //每个格子之间的间距
 )
 
 var (
@@ -74,8 +74,8 @@ type Grid struct {
 
 	next GridData //位移之后的格子 不会移动时为空
 
-	movingCount       int //移动的步数
-	startPoppingCount int //开始弹出的数字
+	movingCount       int //移动的步数 动画展示几次到最终目的地，动画几帧移动到目的地
+	startPoppingCount int //弹出数字经过几帧
 	poppingCount      int //弹出计数
 }
 
@@ -163,38 +163,51 @@ func (t *Grid) Update() error {
 	return nil
 }
 
-// Draw draws the current tile to the given boardImage.
+// Draw 将当前格子绘制到给定的boardImage。
 func (t *Grid) Draw(boardImage *ebiten.Image) {
+	//获取当前格子的位置
 	i, j := t.current.x, t.current.y
+	//获取移动后的位置
 	ni, nj := t.next.x, t.next.y
+	//获取当前的值
 	v := t.current.value
+	//当前值等于0，不更新
 	if v == 0 {
 		return
 	}
 	op := &ebiten.DrawImageOptions{}
-	x := i*tileSize + (i+1)*tileMargin
-	y := j*tileSize + (j+1)*tileMargin
-	nx := ni*tileSize + (ni+1)*tileMargin
-	ny := nj*tileSize + (nj+1)*tileMargin
+	x := i*tileSize + (i+1)*tileMargin    //计算当前格子的x轴左边位置
+	y := j*tileSize + (j+1)*tileMargin    //计算当前格子的y轴上边位置
+	nx := ni*tileSize + (ni+1)*tileMargin //计算移动后格子的x轴左边位置
+	ny := nj*tileSize + (nj+1)*tileMargin //计算移动后格子的y轴上边位置
 	switch {
-	case 0 < t.movingCount:
+	case 0 < t.movingCount: //移动
+		//每次向前移动1/5
 		rate := 1 - float64(t.movingCount)/maxMovingCount
 		x = mean(x, nx, rate)
 		y = mean(y, ny, rate)
-	case 0 < t.startPoppingCount:
+	case 0 < t.startPoppingCount: //生成
 		rate := 1 - float64(t.startPoppingCount)/float64(maxPoppingCount)
 		scale := meanF(0.0, 1.0, rate)
+		//格子慢慢变大
 		op.GeoM.Translate(float64(-tileSize/2), float64(-tileSize/2))
 		op.GeoM.Scale(scale, scale)
 		op.GeoM.Translate(float64(tileSize/2), float64(tileSize/2))
-	case 0 < t.poppingCount:
+	case 0 < t.poppingCount: //合并
+		//合并的时候变大一下
 		const maxScale = 1.2
 		rate := 0.0
 		if maxPoppingCount*2/3 <= t.poppingCount {
-			// 0 to 1
+			// 0 to 1 前两帧
+			// 1-(6-2*6/3)/(6/3)=1-2/4=0.5
+			// 1-(5-2*6/3)/(6/3)=1-1/4=0.75
 			rate = 1 - float64(t.poppingCount-2*maxPoppingCount/3)/float64(maxPoppingCount/3)
 		} else {
-			// 1 to 0
+			// 1 to 0 后四帧
+			// 4/(6*2/3)=4/4=1
+			// 3/(6*2/3)=3/4=0.75
+			// 2/(6*2/3)=2/4=0.5
+			// 1/(6*2/3)=1/4=0.25
 			rate = float64(t.poppingCount) / float64(maxPoppingCount*2/3)
 		}
 		scale := meanF(1.0, maxScale, rate)
@@ -205,27 +218,45 @@ func (t *Grid) Draw(boardImage *ebiten.Image) {
 	op.GeoM.Translate(float64(x), float64(y))
 	op.ColorScale.ScaleWithColor(gridBackgroundColor(v))
 	boardImage.DrawImage(gridImage, op)
+	//格子中的值转换为字符串
 	str := strconv.Itoa(v)
 
 	f := mplusBigFont
+	//值长度超过2用普通字体
+	//值长度超过3用小字体
+	//其余使用大字体
 	switch {
 	case 3 < len(str):
 		f = mplusSmallFont
 	case 2 < len(str):
 		f = mplusNormalFont
 	}
-
+	//计算字体的位置
 	w := font.MeasureString(f, str).Floor()
 	h := (f.Metrics().Ascent + f.Metrics().Descent).Floor()
+	//居中
 	x += (tileSize - w) / 2
 	y += (tileSize-h)/2 + f.Metrics().Ascent.Floor()
 	text.Draw(boardImage, str, f, x, y, gridColor(v))
 }
 
+// mean 计算a移动到b,走过rate后的值
 func mean(a, b int, rate float64) int {
-	return int(float64(a)*(1-rate) + float64(b)*rate)
+	//a-a*rate+b*rate=a-(a+b)*rate                 | b-(b-a)*(1-rate) = b-(b-b*rate-a+a*rate) = b-b+b*rate+a-a*rate = b*rate+a-a*rate = a+(b-a)*rate
+	//假设 a= 10 b=20                     		   | a+(b-a)*rate
+	//1: 10*(1-0.2)+20*0.2 = 8 + 4 = 12   ->2      |  10+(20-10)*0.2=12
+	//2: 12*(1-0.4)+20*0.4 = 7.2 + 8 = 15 ->3      |  12+(20-12)*0.4=15
+	//3: 15*(1-0.6)+20*0.6 = 6 + 12 = 18 ->3       |  15+(20-15)*0.6=18
+	//4: 18*(1-0.8)+20*0.8 = 3.6 + 16 = 19 ->1     |  18+(20-18)*0.8=19
+	//5: 19*(1-1)+20*1 = 0 + 20 = 20 ->1      	   |  19+(20-19)*1=20
+
+	return int(float64(a) + float64(b-a)*rate)
+	//return int(float64(a)*(1-rate) + float64(b)*rate)
 }
 
 func meanF(a, b float64, rate float64) float64 {
-	return a*(1-rate) + b*rate
+	//放大a到b (b-a)*rate的倍数
+	//1*(1-rate) + 1.2*rate = 1-rate + 1.2*rate = 1 + 0.2*rate
+	return a + (b-a)*rate
+	//return a*(1-rate) + b*rate
 }

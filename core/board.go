@@ -314,17 +314,20 @@ func (b *Board) MoveGrids(dir Dir) bool {
 
 // Size returns the board size.
 func (b *Board) Size() (int, int) {
+	//4*80+(4+1)*4 格子大小和边框大小
 	x := b.size*tileSize + (b.size+1)*tileMargin
 	y := x
 	return x, y
 }
 
 func (b *Board) Draw(boardImage *ebiten.Image) {
+	//设置棋盘颜色
 	boardImage.Fill(frameColor)
 	for j := 0; j < b.size; j++ {
 		for i := 0; i < b.size; i++ {
 			v := 0
 			op := &ebiten.DrawImageOptions{}
+			//计算每个格子的左边坐标，上坐标
 			x := i*tileSize + (i+1)*tileMargin
 			y := j*tileSize + (j+1)*tileMargin
 			op.GeoM.Translate(float64(x), float64(y))
@@ -341,9 +344,11 @@ func (b *Board) Draw(boardImage *ebiten.Image) {
 			nonAnimatingTiles[t] = struct{}{}
 		}
 	}
+	//对没有操作的格子渲染
 	for t := range nonAnimatingTiles {
 		t.Draw(boardImage)
 	}
+	//对有操作的格子渲染
 	for t := range animatingTiles {
 		t.Draw(boardImage)
 	}
