@@ -13,9 +13,15 @@ type task func() error
 
 // Board 游戏棋盘
 type Board struct {
-	size  int //棋盘大小
-	grids map[*Grid]struct{}
-	tasks []task
+	x          int //棋盘位置
+	y          int //棋盘位置
+	w          int //
+	h          int //
+	tileSize   int //格子的大小
+	tileMargin int //格子中间的距离
+	size       int //棋盘大小
+	grids      map[*Grid]struct{}
+	tasks      []task
 }
 
 //  0  1  2  3
@@ -24,10 +30,12 @@ type Board struct {
 // 12 13 14 15
 
 // NewBoard 初始化棋盘
-func NewBoard(size int) (*Board, error) {
+func NewBoard(size, tileSize, tileMargin int) (*Board, error) {
 	b := &Board{
-		size:  size,
-		grids: map[*Grid]struct{}{},
+		size:       size,
+		tileSize:   tileSize,
+		tileMargin: tileMargin,
+		grids:      map[*Grid]struct{}{},
 	}
 	//第一次增加两个格子
 	for i := 0; i < 2; i++ {
@@ -37,6 +45,17 @@ func NewBoard(size int) (*Board, error) {
 		}
 	}
 	return b, nil
+}
+
+func (b *Board) SetXY(ScreenWidth, ScreenHeight int) {
+	//棋盘的大小
+	//4*80+(4+1)*4 格子大小和边框大小
+	b.w = b.size*b.tileSize + (b.size+1)*b.tileMargin
+	b.h = b.w
+
+	//棋盘靠下 左右居中
+	b.x = (ScreenWidth - b.w) / 2
+	b.y = ScreenHeight - b.h - floorBoard
 }
 
 // addRandomGrid 增加随机的格子
@@ -105,13 +124,21 @@ func (b *Board) Update(input *Input) error {
 		}
 		return nil
 	}
-	//计算输入的移动
-	if dir, ok := input.Dir(); ok {
-		//棋盘开始移动
-		if err := b.Move(dir); err != nil {
-			return err
+
+	//是否在棋盘上移动
+	var x, y, width, height int
+	width, height = b.Size()
+	x, y = b.XY()
+	if input.InTheArea(x, y, width, height) {
+		//计算输入的移动
+		if dir, ok := input.Dir(); ok {
+			//棋盘开始移动
+			if err := b.Move(dir); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -312,12 +339,14 @@ func (b *Board) MoveGrids(dir Dir) bool {
 	return moved
 }
 
-// Size returns the board size.
+// Size 棋盘的大小
 func (b *Board) Size() (int, int) {
-	//4*80+(4+1)*4 格子大小和边框大小
-	x := b.size*tileSize + (b.size+1)*tileMargin
-	y := x
-	return x, y
+	return b.w, b.h
+}
+
+// XY 棋盘的位置
+func (b *Board) XY() (int, int) {
+	return b.x, b.y
 }
 
 func (b *Board) Draw(boardImage *ebiten.Image) {
@@ -328,8 +357,8 @@ func (b *Board) Draw(boardImage *ebiten.Image) {
 			v := 0
 			op := &ebiten.DrawImageOptions{}
 			//计算每个格子的左边坐标，上坐标
-			x := i*tileSize + (i+1)*tileMargin
-			y := j*tileSize + (j+1)*tileMargin
+			x := i*b.tileSize + (i+1)*b.tileMargin
+			y := j*b.tileSize + (j+1)*b.tileMargin
 			op.GeoM.Translate(float64(x), float64(y))
 			op.ColorScale.ScaleWithColor(gridBackgroundColor(v))
 			boardImage.DrawImage(gridImage, op)

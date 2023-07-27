@@ -130,3 +130,16 @@ func (i *Input) Dir() (Dir, bool) {
 	}
 	return 0, false
 }
+
+func (i *Input) InTheArea(x, y, width, height int) bool {
+	inArea := false
+	if i.mouseInitPosX >= x && i.mouseInitPosX <= x+width && i.mouseInitPosY >= y && i.mouseInitPosY <= y+height {
+		inArea = true
+	}
+	if i.touchLastPosX >= x && i.touchLastPosX <= x+width && i.touchLastPosY >= y && i.touchLastPosY <= y+height {
+		inArea = true
+	}
+
+	return inArea
+
+}

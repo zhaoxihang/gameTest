@@ -7,24 +7,32 @@ import (
 const (
 	ScreenWidth  = 420 //初始画布宽
 	ScreenHeight = 600 //初始画布高
+	floorBoard   = 20
 	boardSize    = 4
 )
 
 type Game struct {
-	input      *Input
-	board      *Board
-	boardImage *ebiten.Image
+	ScreenWidth  int
+	ScreenHeight int
+	input        *Input
+	board        *Board
+	boardImage   *ebiten.Image
 }
 
 func NewGame() (*Game, error) {
 	g := &Game{
-		input: NewInput(),
+		ScreenWidth:  ScreenWidth,
+		ScreenHeight: ScreenHeight,
+		input:        NewInput(),
 	}
 	var err error
-	g.board, err = NewBoard(boardSize)
+	g.board, err = NewBoard(boardSize, tileSize, tileMargin)
 	if err != nil {
 		return g, err
 	}
+	//设置棋盘位置
+	g.board.SetXY(g.ScreenWidth, g.ScreenHeight)
+
 	return g, nil
 }
 
@@ -57,13 +65,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//渲染棋盘
 	g.board.Draw(g.boardImage)
 	op := &ebiten.DrawImageOptions{}
-	//游戏界面的大小
-	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	//棋盘的大小
-	bw, bh := g.boardImage.Bounds().Dx(), g.boardImage.Bounds().Dy()
-	//棋盘居中
-	x := (sw - bw) / 2
-	y := (sh - bh) / 2
+
+	//棋盘的位置
+	x, y := g.board.XY()
 	op.GeoM.Translate(float64(x), float64(y))
 	screen.DrawImage(g.boardImage, op)
 }
