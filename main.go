@@ -6,8 +6,13 @@ import (
 	"log"
 )
 
+const (
+	ScreenWidth  = 420 //初始画布宽
+	ScreenHeight = 600 //初始画布高
+)
+
 func main() {
-	g, err := core.NewGame()
+	g, err := core.NewGame(ScreenWidth, ScreenHeight)
 	if err != nil {
 		log.Fatal(err)
 	}

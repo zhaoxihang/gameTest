@@ -5,10 +5,8 @@ import (
 )
 
 const (
-	ScreenWidth  = 420 //初始画布宽
-	ScreenHeight = 600 //初始画布高
-	floorBoard   = 20
-	boardSize    = 4
+	floorBoard = 20
+	boardSize  = 4
 )
 
 type Game struct {
@@ -16,22 +14,19 @@ type Game struct {
 	ScreenHeight int
 	input        *Input
 	board        *Board
-	boardImage   *ebiten.Image
 }
 
-func NewGame() (*Game, error) {
+func NewGame(screenWidth, screenHeight int) (*Game, error) {
 	g := &Game{
-		ScreenWidth:  ScreenWidth,
-		ScreenHeight: ScreenHeight,
+		ScreenWidth:  screenWidth,
+		ScreenHeight: screenHeight,
 		input:        NewInput(),
 	}
 	var err error
-	g.board, err = NewBoard(boardSize, tileSize, tileMargin)
+	g.board, err = NewBoard(g.ScreenWidth, g.ScreenHeight, boardSize, tileSize, tileMargin)
 	if err != nil {
 		return g, err
 	}
-	//设置棋盘位置
-	g.board.SetXY(g.ScreenWidth, g.ScreenHeight)
 
 	return g, nil
 }
@@ -57,21 +52,18 @@ func (g *Game) Update() error {
 // 在ebiten中，所有图像(如从图像文件创建的图像、屏幕外图像(临时渲染目标)和屏幕)都表示为ebiten.Image对象。
 // 屏幕参数是渲染的最终目的地。该窗口每帧显示屏幕的最终状态。
 func (g *Game) Draw(screen *ebiten.Image) {
-	if g.boardImage == nil {
-		g.boardImage = ebiten.NewImage(g.board.Size())
-	}
 	//设置背景颜色
 	screen.Fill(backgroundColor)
 	//渲染棋盘
-	g.board.Draw(g.boardImage)
+	g.board.Draw()
 	op := &ebiten.DrawImageOptions{}
 
 	//棋盘的位置
 	x, y := g.board.XY()
 	op.GeoM.Translate(float64(x), float64(y))
-	screen.DrawImage(g.boardImage, op)
+	screen.DrawImage(g.board.image, op)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return ScreenWidth, ScreenHeight
+	return g.ScreenWidth, g.ScreenHeight
 }

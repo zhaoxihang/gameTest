@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	mplusSmallFont  font.Face
-	mplusNormalFont font.Face
-	mplusBigFont    font.Face
+	mplusSmallFont  font.Face //小字体
+	mplusNormalFont font.Face //中等字体
+	mplusBigFont    font.Face //大字体
 )
 
 const (
@@ -76,7 +76,7 @@ type Grid struct {
 
 	movingCount       int //移动的步数 动画展示几次到最终目的地，动画几帧移动到目的地
 	startPoppingCount int //弹出数字经过几帧
-	poppingCount      int //弹出计数
+	poppingCount      int //合并的时候进过几帧
 }
 
 type GridData struct {

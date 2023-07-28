@@ -15,13 +15,14 @@ type task func() error
 type Board struct {
 	x          int //棋盘位置
 	y          int //棋盘位置
-	w          int //
-	h          int //
+	w          int //棋盘宽高
+	h          int //棋盘宽高
 	tileSize   int //格子的大小
 	tileMargin int //格子中间的距离
 	size       int //棋盘大小
 	grids      map[*Grid]struct{}
 	tasks      []task
+	image      *ebiten.Image
 }
 
 //  0  1  2  3
@@ -30,13 +31,15 @@ type Board struct {
 // 12 13 14 15
 
 // NewBoard 初始化棋盘
-func NewBoard(size, tileSize, tileMargin int) (*Board, error) {
+func NewBoard(screenWidth, screenHeight, size, tileSize, tileMargin int) (*Board, error) {
 	b := &Board{
 		size:       size,
 		tileSize:   tileSize,
 		tileMargin: tileMargin,
 		grids:      map[*Grid]struct{}{},
 	}
+	//设置棋盘位置
+	b.setXY(screenWidth, screenHeight)
 	//第一次增加两个格子
 	for i := 0; i < 2; i++ {
 		//给棋盘增加格子
@@ -44,10 +47,11 @@ func NewBoard(size, tileSize, tileMargin int) (*Board, error) {
 			return nil, err
 		}
 	}
+	b.image = ebiten.NewImage(b.Size())
 	return b, nil
 }
 
-func (b *Board) SetXY(ScreenWidth, ScreenHeight int) {
+func (b *Board) setXY(ScreenWidth, ScreenHeight int) {
 	//棋盘的大小
 	//4*80+(4+1)*4 格子大小和边框大小
 	b.w = b.size*b.tileSize + (b.size+1)*b.tileMargin
@@ -94,7 +98,7 @@ func (b *Board) addRandomGrid() error {
 	if rand.Intn(10) == 0 {
 		v = 4
 	}
-	// 计算格子的x,y轴
+	// 计算格子在棋盘中的x,y轴
 	x := c % b.size
 	y := c / b.size
 	// 初始化格子
@@ -349,9 +353,9 @@ func (b *Board) XY() (int, int) {
 	return b.x, b.y
 }
 
-func (b *Board) Draw(boardImage *ebiten.Image) {
+func (b *Board) Draw() {
 	//设置棋盘颜色
-	boardImage.Fill(frameColor)
+	b.image.Fill(frameColor)
 	for j := 0; j < b.size; j++ {
 		for i := 0; i < b.size; i++ {
 			v := 0
@@ -361,7 +365,8 @@ func (b *Board) Draw(boardImage *ebiten.Image) {
 			y := j*b.tileSize + (j+1)*b.tileMargin
 			op.GeoM.Translate(float64(x), float64(y))
 			op.ColorScale.ScaleWithColor(gridBackgroundColor(v))
-			boardImage.DrawImage(gridImage, op)
+			//每个空白格子
+			b.image.DrawImage(gridImage, op)
 		}
 	}
 	animatingTiles := map[*Grid]struct{}{}
@@ -375,10 +380,10 @@ func (b *Board) Draw(boardImage *ebiten.Image) {
 	}
 	//对没有操作的格子渲染
 	for t := range nonAnimatingTiles {
-		t.Draw(boardImage)
+		t.Draw(b.image)
 	}
 	//对有操作的格子渲染
 	for t := range animatingTiles {
-		t.Draw(boardImage)
+		t.Draw(b.image)
 	}
 }
